@@ -1,37 +1,92 @@
-import React from "react";
-import { useQuery } from "@apollo/react-hooks";
-import { GET_AUTHORS } from "../queries/queries";
+import React, { useState } from "react";
+import { compose } from "recompose";
+import { graphql } from "react-apollo";
+import {
+	GET_AUTHORS_QUERY,
+	ADD_BOOK_MUTATION,
+	GET_BOOKS_QUERY
+} from "../queries/queries";
 
-const AddBook = () => {
-	const { loading, error, data } = useQuery(GET_AUTHORS);
+const AddBook = ({ getAuthorsQuery, addBookMutation }) => {
+	// const { loading, error, data } = useQuery(ADD_BOOK_MUTATION);
 
-	if (error) return <p>Error :(</p>;
+	const [name, setBookName] = useState("");
+	const [genre, setBookGenre] = useState("");
+	const [authorId, setAuthorId] = useState("");
+
+	const setNameAndBookGenre = (e) => {
+		if (e.target.name === "book-name") {
+			setBookName(e.target.value);
+		} else if (e.target.name === "genre") {
+			setBookGenre(e.target.value);
+		}
+	};
+
+	const addAuthorId = (e) => {
+		setAuthorId(e.target.value);
+	};
+
+	const handleSubmit = (e) => {
+		e.preventDefault();
+
+		addBookMutation({
+			variables: {
+				name,
+				genre,
+				authorId
+			},
+			refetchQueries: [
+				{
+					query: GET_BOOKS_QUERY
+				}
+			]
+		});
+		setBookName("");
+		setBookGenre("");
+		setAuthorId("");
+	};
 
 	const displayAuthors = () => {
-		if (loading) {
+		let data = getAuthorsQuery;
+
+		if (data.loading) {
 			return <option disabled>Loading Authors...</option>;
 		} else {
 			return data.authors.map((author) => (
-				<option key={author.id}>{author.name}</option>
+				<option key={author.id} value={author.id}>
+					{author.name}
+				</option>
 			));
 		}
 	};
 
 	return (
-		<form>
+		<form id='add-book' onSubmit={handleSubmit}>
 			<div className='field'>
 				<label htmlFor='book-name'>Book name:</label>
-				<input type='text' id='book-name' name='book-name' />
+				<input
+					type='text'
+					id='book-name'
+					name='book-name'
+					value={name}
+					onChange={setNameAndBookGenre}
+				/>
 			</div>
 
 			<div className='field'>
 				<label htmlFor='genre'>Genre:</label>
-				<input type='text' id='genre' name='genre' />
+				<input
+					type='text'
+					id='genre'
+					name='genre'
+					value={genre}
+					onChange={setNameAndBookGenre}
+				/>
 			</div>
 
 			<div className='field'>
 				<label htmlFor='author'>Author:</label>
-				<select id='author'>
+				<select id='author' value={authorId} onChange={addAuthorId}>
 					<option disabled>Select Author</option>
 					{displayAuthors()}
 				</select>
@@ -42,4 +97,7 @@ const AddBook = () => {
 	);
 };
 
-export default AddBook;
+export default compose(
+	graphql(GET_AUTHORS_QUERY, { name: "getAuthorsQuery" }),
+	graphql(ADD_BOOK_MUTATION, { name: "addBookMutation" })
+)(AddBook);
